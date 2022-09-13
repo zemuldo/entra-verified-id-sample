@@ -1,0 +1,153 @@
+import * as React from "react";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import { QRCodeSVG } from "qrcode.react";
+
+export default function Verify() {
+  const [error, setError] = React.useState(null);
+  const [qrCodeScanned, setQRCodeScanned] = React.useState(false);
+  const [issuanceStatus, setIssuanceStatus] = React.useState(false);
+  const [payload, setPayload] = React.useState(false);
+  const [respIssuanceReq, setRespIssuanceReq] = React.useState(null);
+
+ React.useEffect(() => {
+   if (!respIssuanceReq) return;
+   var checkStatus = setInterval(function () {
+     fetch(
+       "https://d099-105-163-23-199.ngrok.io/api/issuer/issuance-response?id=" +
+         respIssuanceReq.id
+     )
+       .then((response) => response.text())
+       .then((response) => {
+         if (response.length > 0) {
+           const respMsg = JSON.parse(response);
+           if (respMsg.status === "request_retrieved") {
+             setQRCodeScanned(true);
+             setIssuanceStatus("request_retrieved");
+           }
+           if (respMsg.status === "presentation_verified") {
+             setQRCodeScanned(true);
+             setIssuanceStatus("presentation_verified");
+             setPayload(JSON.stringify(respMsg.payload));
+             clearInterval(checkStatus);
+           }
+           if (respMsg.status === "issuance_failed") {
+             setIssuanceStatus("issuance_failed");
+             setError(respMsg.message);
+             clearInterval(checkStatus);
+           }
+         }
+       })
+       .catch((error) => {
+         console.log(error);
+         setError(error);
+       });
+   }, 2500);
+
+   return () => clearInterval(checkStatus);
+ }, [respIssuanceReq]);
+
+  React.useEffect(() => {
+    fetch(
+      "https://d099-105-163-23-199.ngrok.io/api/verifier/presentation-request"
+    )
+      .then(async (response) => {
+        const message = await response.text();
+        const _respIssuanceReq = JSON.parse(message);
+        setRespIssuanceReq(_respIssuanceReq);
+        if (/Android/i.test(navigator.userAgent)) {
+          window.location.href = _respIssuanceReq.url;
+          setTimeout(function () {
+            window.location.href =
+              "https://play.google.com/store/apps/details?id=com.azure.authenticator";
+          }, 2000);
+        } else if (/iPhone/i.test(navigator.userAgent)) {
+          window.location.replace(_respIssuanceReq.url);
+        } else {
+          if (response.status > 299) {
+            setError(message);
+          } else {
+            console.log(
+              `Not Android or IOS. Generating QR code encoded with ${message}`
+            );
+          }
+        }
+      })
+      .catch((error) => {
+        console.log(error.message);
+      });
+  }, []);
+
+  return (
+    <>
+      <Typography
+        component="h1"
+        variant="h2"
+        align="center"
+        color="text.primary"
+        gutterBottom
+      >
+        Verify VC
+      </Typography>
+
+      {issuanceStatus === "presentation_verified" && (
+        <Typography
+          variant="h5"
+          align="center"
+          color="text.secondary"
+          paragraph
+        >
+          Credential Verified Payload: {payload}
+        </Typography>
+      )}
+      {issuanceStatus === "issuance_failed" && (
+        <Typography
+          variant="h5"
+          align="center"
+          color="text.secondary"
+          paragraph
+        >
+          Credential issuance failed due to error {error}
+        </Typography>
+      )}
+
+      {(!issuanceStatus || issuanceStatus === "request_retrieved") && (
+        <>
+          <Typography
+            variant="h5"
+            align="center"
+            color="text.secondary"
+            paragraph
+          >
+            Scan the QR code below to continue {issuanceStatus}
+          </Typography>
+          <Stack
+            sx={{ pt: 4 }}
+            direction="row"
+            spacing={2}
+            justifyContent="center"
+          >
+            {respIssuanceReq && (
+              <div style={{ opacity: qrCodeScanned ? 0.2 : 1 }}>
+                <QRCodeSVG value={respIssuanceReq.url} />
+              </div>
+            )}
+            {respIssuanceReq?.pin && <span>{respIssuanceReq.pin}</span>}
+          </Stack>
+          <Stack
+            sx={{ pt: 4 }}
+            direction="row"
+            spacing={2}
+            justifyContent="center"
+          >
+            {qrCodeScanned && (
+              <p>
+                Scanned QR proceede on the authenticator to get your credential.
+              </p>
+            )}
+          </Stack>
+        </>
+      )}
+    </>
+  );
+}
