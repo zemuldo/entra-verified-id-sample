@@ -4,6 +4,7 @@ import Typography from "@mui/material/Typography";
 import { QRCodeSVG } from "qrcode.react";
 
 export default function Verify() {
+  const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState(null);
   const [qrCodeScanned, setQRCodeScanned] = React.useState(false);
   const [issuanceStatus, setIssuanceStatus] = React.useState(false);
@@ -14,7 +15,7 @@ export default function Verify() {
    if (!respIssuanceReq) return;
    var checkStatus = setInterval(function () {
      fetch(
-       "https://d099-105-163-23-199.ngrok.io/api/issuer/issuance-response?id=" +
+       "/api/issuer/issuance-response?id=" +
          respIssuanceReq.id
      )
        .then((response) => response.text())
@@ -49,7 +50,7 @@ export default function Verify() {
 
   React.useEffect(() => {
     fetch(
-      "https://d099-105-163-23-199.ngrok.io/api/verifier/presentation-request"
+      "/api/verifier/presentation-request"
     )
       .then(async (response) => {
         const message = await response.text();
@@ -72,8 +73,10 @@ export default function Verify() {
             );
           }
         }
+        setLoading(false)
       })
       .catch((error) => {
+        setLoading(false);
         console.log(error.message);
       });
   }, []);
@@ -113,39 +116,54 @@ export default function Verify() {
 
       {(!issuanceStatus || issuanceStatus === "request_retrieved") && (
         <>
-          <Typography
-            variant="h5"
-            align="center"
-            color="text.secondary"
-            paragraph
-          >
-            Scan the QR code below to continue {issuanceStatus}
-          </Typography>
-          <Stack
-            sx={{ pt: 4 }}
-            direction="row"
-            spacing={2}
-            justifyContent="center"
-          >
-            {respIssuanceReq && (
-              <div style={{ opacity: qrCodeScanned ? 0.2 : 1 }}>
-                <QRCodeSVG value={respIssuanceReq.url} />
-              </div>
-            )}
-            {respIssuanceReq?.pin && <span>{respIssuanceReq.pin}</span>}
-          </Stack>
-          <Stack
-            sx={{ pt: 4 }}
-            direction="row"
-            spacing={2}
-            justifyContent="center"
-          >
-            {qrCodeScanned && (
-              <p>
-                Scanned QR proceede on the authenticator to get your credential.
-              </p>
-            )}
-          </Stack>
+          {loading && (
+            <Typography
+              variant="h5"
+              align="center"
+              color="text.secondary"
+              paragraph
+            >
+              Intializing... Please wait :)
+            </Typography>
+          )}
+          {!loading && (
+            <>
+              <Typography
+                variant="h5"
+                align="center"
+                color="text.secondary"
+                paragraph
+              >
+                Scan the QR code below to continue {issuanceStatus}
+              </Typography>
+              <Stack
+                sx={{ pt: 4 }}
+                direction="row"
+                spacing={2}
+                justifyContent="center"
+              >
+                {respIssuanceReq && (
+                  <div style={{ opacity: qrCodeScanned ? 0.2 : 1 }}>
+                    <QRCodeSVG value={respIssuanceReq.url} />
+                  </div>
+                )}
+                {respIssuanceReq?.pin && <span>{respIssuanceReq.pin}</span>}
+              </Stack>
+              <Stack
+                sx={{ pt: 4 }}
+                direction="row"
+                spacing={2}
+                justifyContent="center"
+              >
+                {qrCodeScanned && (
+                  <p>
+                    Scanned QR proceede on the authenticator to get your
+                    credential.
+                  </p>
+                )}
+              </Stack>
+            </>
+          )}
         </>
       )}
     </>

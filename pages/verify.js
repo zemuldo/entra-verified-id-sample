@@ -10,6 +10,7 @@ import { CssBaseline } from '@mui/material';
 import Container from "@mui/material/Container";
 import Verify from '../components/Verify';
 import Footer from '../components/Footer';
+import Header from '../components/Header';
 
 const theme = createTheme();
 
@@ -24,14 +25,7 @@ export default function Home() {
 
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <AppBar position="relative">
-          <Toolbar>
-            <CameraIcon sx={{ mr: 2 }} />
-            <Typography variant="h6" color="inherit" noWrap>
-              Issue/Verify VC
-            </Typography>
-          </Toolbar>
-        </AppBar>
+        <Header />
         <main style={{ minHeight: "85vh" }}>
           {/* Hero unit */}
           <Box
